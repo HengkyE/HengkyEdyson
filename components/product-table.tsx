@@ -5,7 +5,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { formatIDR } from '@/utils/currency';
-import type { Barang } from '@/types/database';
+import type { Barang } from '@/edysonpos/types/database';
 import { useRouter } from 'expo-router';
 
 interface ProductTableProps {

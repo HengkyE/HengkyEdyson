@@ -14,10 +14,10 @@ import {
   getJualanItemsByGrosirId,
   getJualanItemsByKontanId,
   getJualanKontanByDateRange,
-} from "@/services/database";
-import { thermalPrinter } from "@/services/thermal-printer";
-import type { JualanGrosir, JualanItem, JualanKontan, PaymentRecord } from "@/types/database";
-import type { ReceiptData } from "@/utils/receipt-formatter";
+} from "@/edysonpos/services/database";
+import { thermalPrinter } from "@/edysonpos/services/thermal-printer";
+import type { JualanGrosir, JualanItem, JualanKontan, PaymentRecord } from "@/edysonpos/types/database";
+import type { ReceiptData } from "@/edysonpos/utils/receipt-formatter";
 import { formatIDR } from "@/utils/currency";
 import { formatDateIndo, formatDateTimeIndo } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";
@@ -380,7 +380,7 @@ export default function TransactionsScreen() {
 
     setTelegramResendLoading(true);
     try {
-      const { sendWholesaleSaleToTelegram } = await import("@/services/telegram");
+      const { sendWholesaleSaleToTelegram } = await import("@/edysonpos/services/telegram");
       await sendWholesaleSaleToTelegram(receiptData, "A4", g.invoiceNo, "TOKO EDYSON");
       Alert.alert("Success", "PDF Nota sent to Telegram successfully.", [{ text: "OK" }]);
     } catch (err) {
@@ -398,7 +398,7 @@ export default function TransactionsScreen() {
 
     setTelegramResendLoading(true);
     try {
-      const { sendWholesaleSaleToTelegram } = await import("@/services/telegram");
+      const { sendWholesaleSaleToTelegram } = await import("@/edysonpos/services/telegram");
       await sendWholesaleSaleToTelegram(receiptData, "A4", g.invoiceNo, "SURAT JALAN");
       Alert.alert("Success", "PDF Surat Jalan sent to Telegram successfully.", [{ text: "OK" }]);
     } catch (err) {
@@ -475,7 +475,7 @@ export default function TransactionsScreen() {
 
       // Send payment receipt to Telegram
       try {
-        const { sendPaymentReceiptToTelegram } = await import("@/services/telegram");
+        const { sendPaymentReceiptToTelegram } = await import("@/edysonpos/services/telegram");
         await sendPaymentReceiptToTelegram({
           customerName: updatedSale.namaPelanggan,
           invoiceNo: updatedSale.invoiceNo,

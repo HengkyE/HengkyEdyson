@@ -7,9 +7,10 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AuthGuard } from '@/components/auth-guard';
 import { LanguageProvider } from '@/contexts/LanguageContext';
+import { PortfolioThemeProvider } from '@/portfolio/context/PortfolioThemeContext';
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  initialRouteName: 'index',
 };
 
 export default function RootLayout() {
@@ -20,8 +21,14 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <LanguageProvider>
           <AuthGuard>
+            <PortfolioThemeProvider>
             <Stack>
+              <Stack.Screen name="index" options={{ headerShown: false }} />
+              <Stack.Screen name="portfolios" options={{ headerShown: false }} />
+              <Stack.Screen name="skills" options={{ headerShown: false }} />
+              <Stack.Screen name="projects" options={{ headerShown: false }} />
               <Stack.Screen name="login" options={{ headerShown: false }} />
+              <Stack.Screen name="3sekawan" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
               <Stack.Screen name="products" options={{ headerShown: false }} />
@@ -29,6 +36,7 @@ export default function RootLayout() {
               <Stack.Screen name="sales" options={{ headerShown: false }} />
               <Stack.Screen name="test-connection" options={{ presentation: 'modal', title: 'Test Connection' }} />
             </Stack>
+            </PortfolioThemeProvider>
             <StatusBar style="auto" />
           </AuthGuard>
         </LanguageProvider>

@@ -13,8 +13,8 @@ import {
   getGrosirPaymentsByDateRange,
   getJualanGrosirByDateRange,
   getJualanKontanByDateRange,
-} from '@/services/database';
-import { thermalPrinter } from '@/services/thermal-printer';
+} from '@/edysonpos/services/database';
+import { thermalPrinter } from '@/edysonpos/services/thermal-printer';
 import { formatIDR } from '@/utils/currency';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';

@@ -11,10 +11,10 @@ import {
   getAllJualanGrosir,
   getGrosirPaymentsByJualanGrosirId,
   getJualanGrosirByDateRange,
-} from "@/services/database";
-import { thermalPrinter } from "@/services/thermal-printer";
-import { sendPaymentReceiptToTelegram } from "@/services/telegram";
-import type { GrosirPayment, GrosirPaymentStatus, JualanGrosir, PaymentRecord } from "@/types/database";
+} from "@/edysonpos/services/database";
+import { thermalPrinter } from "@/edysonpos/services/thermal-printer";
+import { sendPaymentReceiptToTelegram } from "@/edysonpos/services/telegram";
+import type { GrosirPayment, GrosirPaymentStatus, JualanGrosir, PaymentRecord } from "@/edysonpos/types/database";
 import { formatIDR } from "@/utils/currency";
 import { formatDateTimeIndo } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";

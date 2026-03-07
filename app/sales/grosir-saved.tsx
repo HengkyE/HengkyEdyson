@@ -8,8 +8,8 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import {
   deleteGrosirDraft,
   getGrosirDrafts
-} from "@/services/database";
-import type { GrosirDraft } from "@/types/database";
+} from "@/edysonpos/services/database";
+import type { GrosirDraft } from "@/edysonpos/types/database";
 import { formatIDR } from "@/utils/currency";
 import { formatDateTimeIndo } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";

@@ -1,4 +1,4 @@
-import { CalculatorModal } from "@/components/calculator-modal";
+import { CalculatorModal } from "@/edysonpos/components/calculator-modal";
 import { PrinterConnectModal } from "@/components/printer-connect-modal";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -18,11 +18,11 @@ import {
   getGrosirDraftItems,
   updateBarangStock,
   updateGrosirDraft,
-} from "@/services/database";
-import { subscribeScannedBarcode } from "@/services/scanned-barcode-store";
-import { sendWholesaleSaleToTelegram } from "@/services/telegram";
-import { thermalPrinter } from "@/services/thermal-printer";
-import type { Barang, CartItem } from "@/types/database";
+} from "@/edysonpos/services/database";
+import { subscribeScannedBarcode } from "@/edysonpos/services/scanned-barcode-store";
+import { sendWholesaleSaleToTelegram } from "@/edysonpos/services/telegram";
+import { thermalPrinter } from "@/edysonpos/services/thermal-printer";
+import type { Barang, CartItem } from "@/edysonpos/types/database";
 import { formatIDR } from "@/utils/currency";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";

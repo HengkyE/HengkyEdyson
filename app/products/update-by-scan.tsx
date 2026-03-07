@@ -1,11 +1,11 @@
-import { ProductForm, type ProductFormData } from "@/components/product-form";
+import { ProductForm, type ProductFormData } from "@/edysonpos/components/product-form";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Card } from "@/components/ui/card";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { deleteBarang, getBarangById, getBarangByBarcode, updateBarang } from "@/services/database";
-import type { Barang } from "@/types/database";
+import { deleteBarang, getBarangById, getBarangByBarcode, updateBarang } from "@/edysonpos/services/database";
+import type { Barang } from "@/edysonpos/types/database";
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useRouter } from "expo-router";

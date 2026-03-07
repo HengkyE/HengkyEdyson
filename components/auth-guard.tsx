@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useRouter, useSegments } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,14 +11,31 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const initialCheckDone = useRef(false);
 
   useEffect(() => {
     if (loading) return; // Wait for auth to initialize
 
     const inAuthGroup = segments[0] === 'login';
+    const isPortfolioRoute =
+      segments[0] === 'index' ||
+      segments[0] === 'portfolios' ||
+      segments[0] === 'skills' ||
+      segments[0] === 'projects' ||
+      segments.length === 0;
 
-    if (!session && !inAuthGroup) {
-      // Redirect to login if not authenticated
+    // Default landing is portfolio: on first run after load, if unauthenticated and on login or (tabs), send to /
+    if (!initialCheckDone.current) {
+      initialCheckDone.current = true;
+      const onAppRouteWithoutAuth = !session && (inAuthGroup || segments[0] === '(tabs)');
+      if (onAppRouteWithoutAuth) {
+        router.replace('/');
+        return;
+      }
+    }
+
+    if (!session && !inAuthGroup && !isPortfolioRoute) {
+      // Redirect to login if not authenticated (except portfolio and project pages)
       router.replace('/login');
     } else if (session && inAuthGroup) {
       // Redirect to home if authenticated and on login page

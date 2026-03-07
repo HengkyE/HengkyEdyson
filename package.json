@@ -5,12 +5,15 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
+    "neon:test": "node ./scripts/test-neon-connection.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "build:web": "npx expo export -p web",
     "lint": "expo lint",
     "printer-server": "node ./services/printer-server.js",
+    "server": "node server/index.js",
+    "server:dev": "node --watch server/index.js",
     "build:android": "eas build --platform android --profile preview",
     "build:android:prod": "eas build --platform android --profile production"
   },
@@ -50,7 +53,9 @@
     "react-native-worklets": "0.5.1"
   },
   "devDependencies": {
+    "@neondatabase/serverless": "^0.10.0",
     "@types/react": "~19.1.0",
+    "dotenv": "^16.4.5",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"

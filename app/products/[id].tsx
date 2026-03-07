@@ -1,10 +1,10 @@
-import { ProductForm, type ProductFormData } from '@/components/product-form';
+import { ProductForm, type ProductFormData } from '@/edysonpos/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePermissions } from '@/hooks/usePermissions';
-import { deleteBarang, getBarangById, updateBarang } from '@/services/database';
+import { deleteBarang, getBarangById, updateBarang } from '@/edysonpos/services/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';

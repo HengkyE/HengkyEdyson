@@ -2,7 +2,7 @@
  * Permission system for role-based access control
  */
 
-import type { UserRole } from '@/types/database';
+import type { UserRole } from '@/edysonpos/types/database';
 
 export type Permission =
   | 'view:all:transactions'

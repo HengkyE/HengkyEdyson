@@ -1,9 +1,9 @@
-import { ProductForm, type ProductFormData } from '@/components/product-form';
+import { ProductForm, type ProductFormData } from '@/edysonpos/components/product-form';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { createBarang, updateBarang } from '@/services/database';
+import { createBarang, updateBarang } from '@/edysonpos/services/database';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';

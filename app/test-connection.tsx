@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { testSupabaseConnection, testBarangById } from '@/utils/supabase-test';
-import { getBarangs, getBarangByBarcode } from '@/services/database';
+import { getBarangs, getBarangByBarcode } from '@/edysonpos/services/database';
 
 export default function TestConnectionScreen() {
   const router = useRouter();

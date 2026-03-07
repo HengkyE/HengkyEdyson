@@ -1,9 +1,11 @@
-import { supabase } from "@/lib/supabase";
-import { getCurrentUserProfile } from "@/services/database";
-import type { UserProfile } from "@/types/database";
-import { Session, User } from "@supabase/supabase-js";
+import { getCurrentUserProfile, updateUserProfile } from "@/edysonpos/services/database";
+import type { UserProfile } from "@/edysonpos/types/database";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import * as neonAuth from "@/lib/neonAuthClient";
+import { supabase } from "@/lib/supabase";
+import type { Session, User } from "@supabase/supabase-js";
 
+// When using Neon Auth we use a session/user shape compatible with Supabase types
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -22,6 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const useNeonAuth = neonAuth.isNeonAuthEnabled();
+
   const fetchProfile = async (userId: string | undefined) => {
     if (!userId) {
       setProfile(null);
@@ -32,15 +36,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userProfile = await getCurrentUserProfile();
       setProfile(userProfile);
 
-      // Update lastLoginAt only if profile exists
+      // Update lastLoginAt only if profile exists (uses Neon API or Supabase)
       if (userProfile) {
         try {
-          await supabase
-            .from("userProfiles")
-            .update({ lastLoginAt: new Date().toISOString() } as never)
-            .eq("id", userId);
+          await updateUserProfile(userId, { lastLoginAt: new Date().toISOString() });
         } catch (updateError) {
-          // Silently fail if update fails (might be RLS issue)
           console.warn("Could not update lastLoginAt:", updateError);
         }
       }
@@ -54,8 +54,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Map Neon Auth session to Supabase-compatible session/user
+  const setNeonSession = (data: neonAuth.NeonAuthSession | null) => {
+    if (!data) {
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+    const u = data.user;
+    const supabaseUser = {
+      id: u.id,
+      email: u.email ?? "",
+      app_metadata: {},
+      user_metadata: { name: u.name },
+      aud: "authenticated",
+      created_at: new Date().toISOString(),
+    } as User;
+    setUser(supabaseUser);
+    setSession({ user: supabaseUser } as Session);
+    fetchProfile(u.id);
+  };
+
   useEffect(() => {
-    // Get initial session — stop loading as soon as we have session (don't wait for profile)
+    if (useNeonAuth) {
+      neonAuth.neonAuthGetSession().then(({ data }) => {
+        setNeonSession(data);
+        setLoading(false);
+      });
+      return;
+    }
+
+    // Supabase: Get initial session — stop loading as soon as we have session (don't wait for profile)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -80,9 +110,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [useNeonAuth]);
 
   const signIn = async (email: string, password: string) => {
+    if (useNeonAuth) {
+      const { data, error } = await neonAuth.neonAuthSignIn(email, password);
+      if (error) {
+        return { error: { message: error.message } };
+      }
+      if (data) setNeonSession(data);
+      return { error: null };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -102,6 +141,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (useNeonAuth) {
+      await neonAuth.neonAuthSignOut();
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("Error signing out:", error);

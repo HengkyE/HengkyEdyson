@@ -7,7 +7,7 @@ import { Colors } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getJualanGrosirToday, getJualanKontanToday } from "@/services/database";
+import { getJualanGrosirToday, getJualanKontanToday } from "@/edysonpos/services/database";
 import { formatIDR } from "@/utils/currency";
 import { getCurrentDateIndo } from "@/utils/date";
 import { Ionicons } from "@expo/vector-icons";

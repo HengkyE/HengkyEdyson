@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePermissions } from "@/hooks/usePermissions";
-import { updateUserProfile } from "@/services/database";
+import { updateUserProfile } from "@/edysonpos/services/database";
 import {
   getBluetoothDevice,
   getPrinterType,
@@ -15,8 +15,8 @@ import {
   setPrinterType,
   type BluetoothDevice,
   type PrinterType,
-} from "@/services/printer-settings";
-import { recreatePrinterService, thermalPrinter } from "@/services/thermal-printer";
+} from "@/edysonpos/services/printer-settings";
+import { recreatePrinterService, thermalPrinter } from "@/edysonpos/services/thermal-printer";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -490,6 +490,19 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </>
           )}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push("/")}
+            activeOpacity={0.7}
+          >
+            <View style={styles.menuItemContent}>
+              <Ionicons name="home-outline" size={24} color={colors.primary} />
+              <ThemedText style={[styles.menuItemText, { color: colors.text }]}>
+                Portfolio
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.icon} />
+          </TouchableOpacity>
         </Card>
 
         <Card style={styles.sectionCard}>

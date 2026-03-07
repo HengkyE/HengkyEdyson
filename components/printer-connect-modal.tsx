@@ -14,8 +14,8 @@ import {
   setPrinterType,
   type BluetoothDevice,
   type PrinterType,
-} from "@/services/printer-settings";
-import { thermalPrinter, recreatePrinterService } from "@/services/thermal-printer";
+} from "@/edysonpos/services/printer-settings";
+import { thermalPrinter, recreatePrinterService } from "@/edysonpos/services/thermal-printer";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
 import {

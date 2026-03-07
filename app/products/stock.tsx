@@ -14,8 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { usePermissions } from "@/hooks/usePermissions";
-import { getBarangs } from "@/services/database";
-import type { Barang } from "@/types/database";
+import { getBarangs } from "@/edysonpos/services/database";
+import type { Barang } from "@/edysonpos/types/database";
 import { Ionicons } from "@expo/vector-icons";
 
 export default function StockManagementScreen() {
