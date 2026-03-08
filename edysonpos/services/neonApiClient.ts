@@ -11,28 +11,55 @@ function apiUrl(path: string, params?: Record<string, string>): string {
   return url.toString();
 }
 
+function wrapNetworkError(e: unknown, context: string): Error {
+  const message = e instanceof Error ? e.message : String(e);
+  if (message === "Load failed" || message === "Failed to fetch" || message.includes("NetworkError") || message.includes("network")) {
+    return new Error(
+      `Cannot connect to the API server at ${BASE || "EXPO_PUBLIC_API_URL"}. ` +
+        "Make sure the backend is running (e.g. npm run server) and .env has EXPO_PUBLIC_API_URL set."
+    );
+  }
+  return e instanceof Error ? e : new Error(String(e));
+}
+
 async function apiGet<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const res = await fetch(apiUrl(path, params), { method: "GET", headers: { Accept: "application/json" } });
-  if (res.status === 404) return null as T;
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res.json();
+  try {
+    const res = await fetch(apiUrl(path, params), { method: "GET", headers: { Accept: "application/json" } });
+    if (res.status === 404) return null as T;
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    return res.json();
+  } catch (e) {
+    throw wrapNetworkError(e, "GET " + path);
+  }
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(apiUrl(path), { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res.json();
+  try {
+    const res = await fetch(apiUrl(path), { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    return res.json();
+  } catch (e) {
+    throw wrapNetworkError(e, "POST " + path);
+  }
 }
 
 async function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(apiUrl(path), { method: "PATCH", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
-  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
-  return res.json();
+  try {
+    const res = await fetch(apiUrl(path), { method: "PATCH", headers: { "Content-Type": "application/json", Accept: "application/json" }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+    return res.json();
+  } catch (e) {
+    throw wrapNetworkError(e, "PATCH " + path);
+  }
 }
 
 async function apiDelete(path: string): Promise<void> {
-  const res = await fetch(apiUrl(path), { method: "DELETE" });
-  if (!res.ok && res.status !== 204) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+  try {
+    const res = await fetch(apiUrl(path), { method: "DELETE" });
+    if (!res.ok && res.status !== 204) throw new Error((await res.json().catch(() => ({}))).error || res.statusText);
+  } catch (e) {
+    throw wrapNetworkError(e, "DELETE " + path);
+  }
 }
 
 export function isNeonApiEnabled(): boolean {

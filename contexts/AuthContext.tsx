@@ -12,8 +12,10 @@ interface AuthContextType {
   profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  isNeonAuth: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -167,6 +169,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null };
   };
 
+  const signUp = async (email: string, password: string, name: string) => {
+    if (useNeonAuth) {
+      const { data, error } = await neonAuth.neonAuthSignUp(email, password, name);
+      if (error) {
+        return { error: { message: error.message, code: error.code } };
+      }
+      if (data) setNeonSession(data);
+      return { error: null };
+    }
+    return { error: { message: "Sign up is only supported with Neon Auth. Set EXPO_PUBLIC_NEON_AUTH_URL." } };
+  };
+
   const signOut = async () => {
     if (useNeonAuth) {
       await neonAuth.neonAuthSignOut();
@@ -192,7 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signOut, refreshProfile }}
+      value={{ session, user, profile, loading, signIn, signUp, signOut, refreshProfile, isNeonAuth: useNeonAuth }}
     >
       {children}
     </AuthContext.Provider>

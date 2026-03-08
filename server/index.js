@@ -15,14 +15,34 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 if (!process.env.DATABASE_URL) {
-  console.error("Missing DATABASE_URL. Copy .env from project root or set DATABASE_URL.");
-  process.exit(1);
+  console.error("Missing DATABASE_URL. Set it in .env (local) or Vercel Project Settings → Environment Variables.");
+  if (!process.env.VERCEL) process.exit(1);
 }
 
-const sql = neon(process.env.DATABASE_URL);
+const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null;
 
-app.use(cors({ origin: true, credentials: true }));
+// Allow localhost (dev) and Vercel deployments; credentials for cookies/auth
+const corsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    const vercel = /^https:\/\/([a-z0-9-]+\.)?vercel\.app$/.test(origin) || /\.vercel\.app$/.test(origin);
+    cb(null, local || vercel);
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Accept", "Authorization"],
+};
+app.use(cors(corsOptions));
 app.use(express.json({ limit: "2mb" }));
+
+// Fail fast when DATABASE_URL is missing (e.g. Vercel env not set)
+app.use("/api", (req, res, next) => {
+  if (!sql) {
+    return res.status(503).json({ error: "DATABASE_URL is not configured. Set it in Vercel Project Settings → Environment Variables." });
+  }
+  next();
+});
 
 // ---------- Categories ----------
 app.get("/api/categories", async (req, res) => {
@@ -549,6 +569,11 @@ app.delete("/api/billiard/shop-expenses/:id", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Neon API at http://localhost:${PORT}`);
-});
+// Only start listening when running locally (not on Vercel serverless)
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Neon API at http://localhost:${PORT}`);
+  });
+}
+
+export default app;

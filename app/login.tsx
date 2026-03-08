@@ -30,7 +30,7 @@ export default function LoginScreen() {
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { signIn, loading: authLoading } = useAuth();
+  const { signIn, loading: authLoading, isNeonAuth } = useAuth();
   const { t } = useLanguage();
 
   const isNarrow = width < LOGIN_BREAKPOINT;
@@ -72,32 +72,39 @@ export default function LoginScreen() {
 
   const getErrorMessage = (error: any): string => {
     if (!error) return '';
-    
-    const message = error.message || '';
-    
-    // Check for specific Supabase error messages
-    if (message.includes('Invalid login credentials') || 
-        message.includes('Email not confirmed') ||
-        message.includes('Invalid email or password')) {
-      return 'Password salah. Silakan coba lagi.';
+    const message = String(error.message || '');
+
+    // Neon Auth / Better Auth messages
+    if (message.includes('Invalid credentials') || message.includes('Invalid login') || message.includes('Invalid email or password')) {
+      return 'Email atau password salah. Silakan coba lagi.';
     }
-    
-    if (message.includes('User not found')) {
+    if (message.includes('User not found') || message.includes('No user found')) {
       return 'Email tidak ditemukan.';
     }
-    
+    if (message.includes('already exists') || message.includes('already registered')) {
+      return 'Email sudah terdaftar. Silakan masuk.';
+    }
+    if (message.includes('rate limit') || message.includes('too many')) {
+      return 'Terlalu banyak percobaan. Silakan tunggu sebentar.';
+    }
+    if (message.includes('Neon Auth URL not configured')) {
+      return 'Neon Auth belum dikonfigurasi.';
+    }
+
+    // Supabase
+    if (message.includes('Invalid login credentials') || message.includes('Email not confirmed')) {
+      return 'Password salah. Silakan coba lagi.';
+    }
     if (message.includes('Email rate limit exceeded')) {
       return 'Terlalu banyak percobaan. Silakan tunggu sebentar.';
     }
-    
-    // Default error message
-    return 'Email atau password salah. Silakan coba lagi.';
+
+    return message || 'Email atau password salah. Silakan coba lagi.';
   };
 
-  const handleLogin = async () => {
-    // Clear previous errors
+  const handleSubmit = async () => {
     setError(null);
-    
+
     if (!email.trim() || !password.trim()) {
       setError('Harap masukkan email dan password');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -105,7 +112,6 @@ export default function LoginScreen() {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
       setError('Format email tidak valid');
@@ -116,24 +122,20 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      const { error: signInError } = await signIn(email.trim(), password);
+      const { error: authError } = await signIn(email.trim(), password);
 
-      if (signInError) {
-        const errorMessage = getErrorMessage(signInError);
-        setError(errorMessage);
+      if (authError) {
+        setError(getErrorMessage(authError));
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         shake();
         return;
       }
 
-      // Success feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      // Success - navigation will be handled by the auth state change
       router.replace('/(tabs)');
-    } catch (error: any) {
-      console.error('Login error:', error);
-      setError('Terjadi kesalahan. Silakan coba lagi.');
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError(getErrorMessage(err) || 'Terjadi kesalahan. Silakan coba lagi.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       shake();
     } finally {
@@ -169,16 +171,16 @@ export default function LoginScreen() {
               TOKO EDYSON
             </ThemedText>
             <ThemedText style={[styles.subtitle, { color: colors.icon }]}>
-              POS System
+              {isNeonAuth ? 'Neon Auth · POS System' : 'POS System'}
             </ThemedText>
           </View>
 
           <Card style={styles.card} variant="elevated">
             <ThemedText type="subtitle" style={[styles.cardTitle, { color: colors.text }]}>
-              {t("login.signIn")}
+              {t('login.signIn')}
             </ThemedText>
             <ThemedText style={[styles.cardSubtitle, { color: colors.icon }]}>
-              {t("login.enterCredentials")}
+              {t('login.enterCredentials')}
             </ThemedText>
 
             {/* Error Message */}
@@ -303,12 +305,24 @@ export default function LoginScreen() {
             </View>
 
             <Button
-              title={t("login.signIn")}
-              onPress={handleLogin}
+              title={t('login.signIn')}
+              onPress={handleSubmit}
               loading={loading || authLoading}
               style={styles.loginButton}
               size="large"
             />
+
+            {isNeonAuth && (
+              <TouchableOpacity
+                onPress={() => router.push('/sign-up')}
+                style={styles.switchModeLink}
+                activeOpacity={0.7}
+              >
+                <ThemedText style={[styles.switchModeText, { color: colors.primary }]}>
+                  Belum punya akun? Daftar dengan Neon Auth
+                </ThemedText>
+              </TouchableOpacity>
+            )}
           </Card>
 
           <View style={styles.footer}>
@@ -434,6 +448,15 @@ const styles = StyleSheet.create({
   loginButton: {
     marginTop: 12,
     width: '100%',
+  },
+  switchModeLink: {
+    marginTop: 16,
+    alignItems: 'center',
+    padding: 8,
+  },
+  switchModeText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   footer: {
     marginTop: 40,

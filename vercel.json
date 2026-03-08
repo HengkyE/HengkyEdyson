@@ -5,10 +5,7 @@
   "installCommand": "npm install",
   "devCommand": "npm run web",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
   "env": {
     "NODE_ENV": "production"

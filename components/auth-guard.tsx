@@ -16,7 +16,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return; // Wait for auth to initialize
 
-    const inAuthGroup = segments[0] === 'login';
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'sign-up';
     const isPortfolioRoute =
       segments[0] === 'index' ||
       segments[0] === 'portfolios' ||

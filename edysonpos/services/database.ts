@@ -1,5 +1,6 @@
 /**
- * Database service layer – uses Neon API when EXPO_PUBLIC_API_URL is set, else Supabase.
+ * Database service layer – uses Neon Data API when EXPO_PUBLIC_NEON_DATA_API_URL is set
+ * (direct to Neon, no backend), else Neon API when EXPO_PUBLIC_API_URL is set, else Supabase.
  */
 
 import { getCurrentNeonUserId } from "@/lib/neonAuthClient";
@@ -21,13 +22,23 @@ import type {
   UserRole,
 } from "@/edysonpos/types/database";
 import { getCurrentDateTimeIndo } from "@/utils/date";
-import * as neon from "./neonApiClient";
+import * as neonApi from "./neonApiClient";
+import * as neonData from "./neonDataApiClient";
 
-const USE_NEON = neon.isNeonApiEnabled();
+/** Re-export so UI can catch 401/403 and e.g. redirect to login. */
+export { NeonDataApiError } from "./neonDataApiClient";
+
+const USE_NEON_DATA_API = neonData.isNeonDataApiEnabled();
+const USE_NEON_API = !USE_NEON_DATA_API && neonApi.isNeonApiEnabled();
+const USE_NEON = USE_NEON_DATA_API || USE_NEON_API;
+
+function neon(): typeof neonApi {
+  return USE_NEON_DATA_API ? (neonData as unknown as typeof neonApi) : neonApi;
+}
 
 // Categories
 export async function getCategories(): Promise<Category[]> {
-  if (USE_NEON) return neon.neonGetCategories() as Promise<Category[]>;
+  if (USE_NEON) return neon().neonGetCategories() as Promise<Category[]>;
   const { data, error } = await supabase
     .from("categories")
     .select("*")
@@ -38,7 +49,7 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function createCategory(title: string): Promise<Category> {
-  if (USE_NEON) return neon.neonCreateCategory(title) as Promise<Category>;
+  if (USE_NEON) return neon().neonCreateCategory(title) as Promise<Category>;
   const { data, error } = await supabase
     .from("categories")
     .insert({ title } as any)
@@ -51,7 +62,7 @@ export async function createCategory(title: string): Promise<Category> {
 
 // System Data
 export async function getSystemData(): Promise<SystemData | null> {
-  if (USE_NEON) return neon.neonGetSystemData() as Promise<SystemData | null>;
+  if (USE_NEON) return neon().neonGetSystemData() as Promise<SystemData | null>;
   const { data, error } = await supabase.from("systemData").select("*").limit(1).single();
 
   if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows returned
@@ -59,7 +70,7 @@ export async function getSystemData(): Promise<SystemData | null> {
 }
 
 export async function getNextGrosirInvoiceNo(): Promise<number> {
-  if (USE_NEON) return neon.neonGetNextGrosirInvoiceNo();
+  if (USE_NEON) return neon().neonGetNextGrosirInvoiceNo();
   // Check for existing system data with 'notaGrosir' ID (matching old system)
   const { data: existingData, error: fetchError } = await supabase
     .from("systemData")
@@ -94,7 +105,7 @@ export async function getNextGrosirInvoiceNo(): Promise<number> {
 
 // Products (Barangs)
 export async function getBarangs(): Promise<Barang[]> {
-  if (USE_NEON) return neon.neonGetBarangs() as Promise<Barang[]>;
+  if (USE_NEON) return neon().neonGetBarangs() as Promise<Barang[]>;
   const { data, error, status, statusText } = await supabase
     .from("barangs")
     .select("*")
@@ -127,7 +138,7 @@ export async function getBarangs(): Promise<Barang[]> {
 }
 
 export async function getBarangById(id: string): Promise<Barang | null> {
-  if (USE_NEON) return neon.neonGetBarangById(id) as Promise<Barang | null>;
+  if (USE_NEON) return neon().neonGetBarangById(id) as Promise<Barang | null>;
   const { data, error } = await supabase.from("barangs").select("*").eq("id", id).single();
 
   if (error) {
@@ -150,7 +161,7 @@ export async function getBarangByBarcode(barcode: string): Promise<Barang | null
   const trimmedBarcode = barcode.trim().toUpperCase();
   console.log("Fetching barang with barcode:", trimmedBarcode);
 
-  if (USE_NEON) return neon.neonGetBarangById(trimmedBarcode) as Promise<Barang | null>;
+  if (USE_NEON) return neon().neonGetBarangById(trimmedBarcode) as Promise<Barang | null>;
   // Barcode is stored in the id field (varchar)
   const { data, error, status, statusText } = await supabase
     .from("barangs")
@@ -198,7 +209,7 @@ export async function updateBarangStock(
   stockTokoMini?: number
 ): Promise<void> {
   if (USE_NEON) {
-    await neon.neonUpdateBarangStock(id, stockBarang, stockTokoMini);
+    await neon().neonUpdateBarangStock(id, stockBarang, stockTokoMini);
     return;
   }
   try {
@@ -241,7 +252,7 @@ export async function createBarang(
   createdBy: string = "system"
 ): Promise<Barang> {
   if (USE_NEON) {
-    return neon.neonCreateBarang({
+    return neon().neonCreateBarang({
       id: id.toUpperCase(),
       barangNama: barangNama.toUpperCase(),
       barangUnit,
@@ -311,7 +322,7 @@ export async function updateBarang(
   if (updates.stockBarang !== undefined) updateData.stockBarang = updates.stockBarang;
   if (updates.stockTokoMini !== undefined) updateData.stockTokoMini = updates.stockTokoMini;
 
-  if (USE_NEON) return neon.neonUpdateBarang(id, updateData) as Promise<Barang>;
+  if (USE_NEON) return neon().neonUpdateBarang(id, updateData) as Promise<Barang>;
   const { data, error } = await supabase
     .from("barangs")
     .update(updateData as never)
@@ -328,7 +339,7 @@ export async function updateBarang(
 
 export async function deleteBarang(id: string): Promise<void> {
   if (USE_NEON) {
-    await neon.neonDeleteBarang(id);
+    await neon().neonDeleteBarang(id);
     return;
   }
   const { error } = await supabase.from("barangs").delete().eq("id", id);
@@ -344,7 +355,7 @@ export async function deleteBarang(id: string): Promise<void> {
  * Get user profile by ID
  */
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  if (USE_NEON) return neon.neonGetUserProfile(userId) as Promise<UserProfile | null>;
+  if (USE_NEON) return neon().neonGetUserProfile(userId) as Promise<UserProfile | null>;
   const { data, error } = await supabase
     .from("userProfiles")
     .select("*")
@@ -388,7 +399,7 @@ export async function createUserProfile(data: {
   phone?: string;
   role: UserRole;
 }): Promise<UserProfile> {
-  if (USE_NEON) return neon.neonCreateUserProfile(data) as Promise<UserProfile>;
+  if (USE_NEON) return neon().neonCreateUserProfile(data) as Promise<UserProfile>;
   const { data: profile, error } = await supabase
     .from("userProfiles")
     .insert({
@@ -413,7 +424,7 @@ export async function updateUserProfile(
   userId: string,
   updates: Partial<Pick<UserProfile, "fullName" | "phone" | "role" | "isActive" | "lastLoginAt">>
 ): Promise<UserProfile> {
-  if (USE_NEON) return neon.neonUpdateUserProfile(userId, updates) as Promise<UserProfile>;
+  if (USE_NEON) return neon().neonUpdateUserProfile(userId, updates) as Promise<UserProfile>;
   const { data, error } = await supabase
     .from("userProfiles")
     .update(updates as never)
@@ -429,7 +440,7 @@ export async function updateUserProfile(
  * Get all user profiles (admin only)
  */
 export async function getAllUserProfiles(): Promise<UserProfile[]> {
-  if (USE_NEON) return neon.neonGetAllUserProfiles() as Promise<UserProfile[]>;
+  if (USE_NEON) return neon().neonGetAllUserProfiles() as Promise<UserProfile[]>;
   const { data, error } = await supabase
     .from("userProfiles")
     .select("*")
@@ -450,7 +461,7 @@ export async function getUsersWithoutProfiles(): Promise<
     created_at: string;
   }>
 > {
-  if (USE_NEON) return neon.neonGetUsersWithoutProfiles();
+  if (USE_NEON) return neon().neonGetUsersWithoutProfiles();
   // Use RPC to call a database function that returns users without profiles
   const { data, error } = await supabase.rpc("get_users_without_profiles");
 
@@ -476,7 +487,7 @@ export async function createJualanKontan(
   try {
     const id = Date.now().toString();
     if (USE_NEON) {
-      const data = await neon.neonCreateJualanKontan({
+      const data = await neon().neonCreateJualanKontan({
         id,
         totalBelanja,
         namaKasir,
@@ -525,7 +536,7 @@ export async function createJualanKontan(
 }
 
 export async function getJualanKontanToday(): Promise<JualanKontan[]> {
-  if (USE_NEON) return neon.neonGetJualanKontanToday() as Promise<JualanKontan[]>;
+  if (USE_NEON) return neon().neonGetJualanKontanToday() as Promise<JualanKontan[]>;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const { data, error } = await supabase
@@ -538,7 +549,7 @@ export async function getJualanKontanToday(): Promise<JualanKontan[]> {
 }
 
 export async function getAllJualanKontan(): Promise<JualanKontan[]> {
-  if (USE_NEON) return neon.neonGetAllJualanKontan() as Promise<JualanKontan[]>;
+  if (USE_NEON) return neon().neonGetAllJualanKontan() as Promise<JualanKontan[]>;
   const { data, error } = await supabase
     .from("jualanKontan")
     .select("*")
@@ -562,7 +573,7 @@ export async function getJualanKontanByDateRange(
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
   if (USE_NEON) {
-    return neon.neonGetJualanKontanByDateRange(start.toISOString(), end.toISOString(), userId) as Promise<JualanKontan[]>;
+    return neon().neonGetJualanKontanByDateRange(start.toISOString(), end.toISOString(), userId) as Promise<JualanKontan[]>;
   }
   let query = supabase
     .from("jualanKontan")
@@ -597,7 +608,7 @@ export async function insertGrosirPayment(
   userId?: string
 ): Promise<GrosirPayment> {
   if (USE_NEON) {
-    return neon.neonInsertGrosirPayment({
+    return neon().neonInsertGrosirPayment({
       jualanGrosirId,
       amount,
       paymentMethod,
@@ -625,7 +636,7 @@ export async function insertGrosirPayment(
 export async function getGrosirPaymentsByJualanGrosirId(
   jualanGrosirId: string
 ): Promise<GrosirPayment[]> {
-  if (USE_NEON) return neon.neonGetGrosirPaymentsByJualanGrosirId(jualanGrosirId) as Promise<GrosirPayment[]>;
+  if (USE_NEON) return neon().neonGetGrosirPaymentsByJualanGrosirId(jualanGrosirId) as Promise<GrosirPayment[]>;
   const { data, error } = await supabase
     .from("grosirPayments")
     .select("*")
@@ -643,7 +654,7 @@ export async function getGrosirPaymentsByDateRange(
   end.setHours(23, 59, 59, 999);
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
-  if (USE_NEON) return neon.neonGetGrosirPaymentsByDateRange(start.toISOString(), end.toISOString()) as Promise<GrosirPayment[]>;
+  if (USE_NEON) return neon().neonGetGrosirPaymentsByDateRange(start.toISOString(), end.toISOString()) as Promise<GrosirPayment[]>;
   const { data, error } = await supabase
     .from("grosirPayments")
     .select("*")
@@ -671,7 +682,7 @@ export async function createJualanGrosir(
   const { payment_status, percent_paid } = getGrosirPaymentStatus(setorGrosir, totalBelanja);
 
   if (USE_NEON) {
-    const saleData = await neon.neonCreateJualanGrosir({
+    const saleData = await neon().neonCreateJualanGrosir({
       invoiceNo,
       namaPelanggan: namaPelanggan ?? "",
       totalBelanja,
@@ -698,7 +709,7 @@ export async function createJualanGrosir(
       } catch (itemsError) {
         console.error("Error creating sale items for jualanGrosir:", itemsError);
         try {
-          await neon.neonDeleteJualanGrosir(saleData.id);
+          await neon().neonDeleteJualanGrosir(saleData.id);
         } catch (cleanupError) {
           console.error("Rollback failed for jualanGrosir:", cleanupError);
         }
@@ -788,7 +799,7 @@ export async function createJualanGrosir(
 }
 
 export async function getJualanGrosirToday(): Promise<JualanGrosir[]> {
-  if (USE_NEON) return neon.neonGetJualanGrosirToday() as Promise<JualanGrosir[]>;
+  if (USE_NEON) return neon().neonGetJualanGrosirToday() as Promise<JualanGrosir[]>;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const { data, error } = await supabase
@@ -801,7 +812,7 @@ export async function getJualanGrosirToday(): Promise<JualanGrosir[]> {
 }
 
 export async function getAllJualanGrosir(): Promise<JualanGrosir[]> {
-  if (USE_NEON) return neon.neonGetAllJualanGrosir() as Promise<JualanGrosir[]>;
+  if (USE_NEON) return neon().neonGetAllJualanGrosir() as Promise<JualanGrosir[]>;
   const { data, error } = await supabase
     .from("jualanGrosir")
     .select("*")
@@ -825,7 +836,7 @@ export async function getJualanGrosirByDateRange(
   end.setHours(23, 59, 59, 999);
   const start = new Date(startDate);
   start.setHours(0, 0, 0, 0);
-  if (USE_NEON) return neon.neonGetJualanGrosirByDateRange(start.toISOString(), end.toISOString(), userId) as Promise<JualanGrosir[]>;
+  if (USE_NEON) return neon().neonGetJualanGrosirByDateRange(start.toISOString(), end.toISOString(), userId) as Promise<JualanGrosir[]>;
   let query = supabase.from("jualanGrosir").select("*").gte("created_at", start.toISOString()).lte("created_at", end.toISOString());
   if (userId) query = query.eq("userId", userId);
   const { data, error } = await query.order("created_at", { ascending: false });
@@ -853,7 +864,7 @@ async function ensureBarangsExistForCartItems(items: CartItem[]): Promise<void> 
   if (uniqueIds.length === 0) return;
 
   if (USE_NEON) {
-    const all = await neon.neonGetBarangs();
+    const all = await neon().neonGetBarangs();
     const existingIds = new Set((all || []).map((r: any) => String(r.id).toUpperCase()));
     const missingIds = uniqueIds.filter((id) => !existingIds.has(id));
     const nowIso = new Date().toISOString();
@@ -861,7 +872,7 @@ async function ensureBarangsExistForCartItems(items: CartItem[]): Promise<void> 
       const sourceItem = items.find((it) => it?.barang?.id?.trim().toUpperCase() === id);
       const barang = sourceItem?.barang;
       const fallbackName = barang?.barangNama || "MANUAL ITEM";
-      await neon.neonCreateBarang({
+      await neon().neonCreateBarang({
         id,
         createdBy: barang?.createdBy || "system",
         barangNama: String(fallbackName).toUpperCase(),
@@ -954,7 +965,7 @@ export async function createJualanItems(
     }));
 
     if (USE_NEON) {
-      const inserted = await neon.neonCreateJualanItems(itemsToInsert);
+      const inserted = await neon().neonCreateJualanItems(itemsToInsert);
       return (inserted || []) as JualanItem[];
     }
 
@@ -1003,7 +1014,7 @@ export async function createJualanItems(
  * @param jualanKontanId - ID of the cash sale
  */
 export async function getJualanItemsByKontanId(jualanKontanId: string): Promise<JualanItem[]> {
-  if (USE_NEON) return neon.neonGetJualanItemsByKontanId(jualanKontanId) as Promise<JualanItem[]>;
+  if (USE_NEON) return neon().neonGetJualanItemsByKontanId(jualanKontanId) as Promise<JualanItem[]>;
   console.log("getJualanItemsByKontanId called with:", jualanKontanId);
   const { data, error } = await supabase
     .from("jualanItems")
@@ -1024,7 +1035,7 @@ export async function getJualanItemsByKontanId(jualanKontanId: string): Promise<
  * @param jualanGrosirId - ID of the wholesale sale
  */
 export async function getJualanItemsByGrosirId(jualanGrosirId: string): Promise<JualanItem[]> {
-  if (USE_NEON) return neon.neonGetJualanItemsByGrosirId(jualanGrosirId) as Promise<JualanItem[]>;
+  if (USE_NEON) return neon().neonGetJualanItemsByGrosirId(jualanGrosirId) as Promise<JualanItem[]>;
   console.log("getJualanItemsByGrosirId called with:", jualanGrosirId);
   const { data, error } = await supabase
     .from("jualanItems")
@@ -1078,14 +1089,14 @@ export async function addGrosirPayment(
     );
 
     if (USE_NEON) {
-      const sale = await neon.neonGetJualanGrosirById(jualanGrosirId) as JualanGrosir;
+      const sale = await neon().neonGetJualanGrosirById(jualanGrosirId) as JualanGrosir;
       if (!sale) throw new Error("Sale not found");
       const existingPayments: PaymentRecord[] = sale.paymentHistory || [];
       const updatedPayments = [...existingPayments, payment];
       const newSetorGrosir = updatedPayments.reduce((sum, p) => sum + p.amount, 0);
       const newSisaBonGrosir = sale.totalBelanja - newSetorGrosir;
       const { payment_status, percent_paid } = getGrosirPaymentStatus(newSetorGrosir, sale.totalBelanja);
-      const updated = await neon.neonUpdateJualanGrosir(jualanGrosirId, {
+      const updated = await neon().neonUpdateJualanGrosir(jualanGrosirId, {
         paymentHistory: updatedPayments,
         setorGrosir: newSetorGrosir,
         sisaBonGrosir: newSisaBonGrosir,
@@ -1154,7 +1165,7 @@ export async function createGrosirDraft(
   await ensureBarangsExistForCartItems(items);
 
   if (USE_NEON) {
-    const draft = await neon.neonCreateGrosirDraft({
+    const draft = await neon().neonCreateGrosirDraft({
       createdBy: userId ?? null,
       namaPelanggan: namaPelanggan || "",
       totalBelanja,
@@ -1219,7 +1230,7 @@ export async function updateGrosirDraft(
   await ensureBarangsExistForCartItems(items);
 
   if (USE_NEON) {
-    const updated = await neon.neonUpdateGrosirDraft(draftId, {
+    const updated = await neon().neonUpdateGrosirDraft(draftId, {
       namaPelanggan: namaPelanggan || "",
       totalBelanja,
       setorAwal: setorAwal || 0,
@@ -1282,7 +1293,7 @@ export async function updateGrosirDraft(
 }
 
 export async function getGrosirDrafts(userId?: string): Promise<GrosirDraft[]> {
-  if (USE_NEON) return neon.neonGetGrosirDrafts(userId) as Promise<GrosirDraft[]>;
+  if (USE_NEON) return neon().neonGetGrosirDrafts(userId) as Promise<GrosirDraft[]>;
   let q = supabase.from("grosirDrafts").select("*").eq("status", "draft").order("updated_at", { ascending: false });
   if (userId) q = q.eq("createdBy", userId);
   const { data, error } = await q;
@@ -1291,7 +1302,7 @@ export async function getGrosirDrafts(userId?: string): Promise<GrosirDraft[]> {
 }
 
 export async function getGrosirDraftById(id: string): Promise<GrosirDraft | null> {
-  if (USE_NEON) return neon.neonGetGrosirDraftById(id) as Promise<GrosirDraft | null>;
+  if (USE_NEON) return neon().neonGetGrosirDraftById(id) as Promise<GrosirDraft | null>;
   const { data, error } = await supabase.from("grosirDrafts").select("*").eq("id", id).single();
   if (error) {
     if (error.code === "PGRST116") return null;
@@ -1301,7 +1312,7 @@ export async function getGrosirDraftById(id: string): Promise<GrosirDraft | null
 }
 
 export async function getGrosirDraftItems(draftId: string): Promise<GrosirDraftItem[]> {
-  if (USE_NEON) return neon.neonGetGrosirDraftItems(draftId) as Promise<GrosirDraftItem[]>;
+  if (USE_NEON) return neon().neonGetGrosirDraftItems(draftId) as Promise<GrosirDraftItem[]>;
   const { data, error } = await supabase.from("grosirDraftItems").select("*").eq("grosirDraftId", draftId).order("barangNama");
   if (error) throw error;
   return (data || []) as GrosirDraftItem[];
@@ -1309,7 +1320,7 @@ export async function getGrosirDraftItems(draftId: string): Promise<GrosirDraftI
 
 export async function deleteGrosirDraft(id: string): Promise<void> {
   if (USE_NEON) {
-    await neon.neonDeleteGrosirDraft(id);
+    await neon().neonDeleteGrosirDraft(id);
     return;
   }
   const { error } = await supabase.from("grosirDrafts").delete().eq("id", id);
