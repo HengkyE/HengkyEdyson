@@ -87,16 +87,8 @@ export default function LoginScreen() {
     if (message.includes('rate limit') || message.includes('too many')) {
       return 'Terlalu banyak percobaan. Silakan tunggu sebentar.';
     }
-    if (message.includes('Neon Auth URL not configured')) {
+    if (message.includes('Neon Auth URL not configured') || message.includes('Configure Neon Auth')) {
       return 'Neon Auth belum dikonfigurasi.';
-    }
-
-    // Supabase
-    if (message.includes('Invalid login credentials') || message.includes('Email not confirmed')) {
-      return 'Password salah. Silakan coba lagi.';
-    }
-    if (message.includes('Email rate limit exceeded')) {
-      return 'Terlalu banyak percobaan. Silakan tunggu sebentar.';
     }
 
     return message || 'Email atau password salah. Silakan coba lagi.';

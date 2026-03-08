@@ -1,9 +1,12 @@
 /**
  * Neon API client – same interface as database.ts but calls the Neon backend.
  * Used when EXPO_PUBLIC_API_URL is set (data stored in Neon).
+ * Placeholder URLs (e.g. your-project.vercel.app) are treated as "not set" so the app can use direct Data API instead.
  */
 
-const BASE = process.env.EXPO_PUBLIC_API_URL || "";
+const RAW_BASE = (process.env.EXPO_PUBLIC_API_URL || "").trim();
+const IS_PLACEHOLDER = /your-project\.vercel\.app|localhost:3001/i.test(RAW_BASE) && !RAW_BASE.startsWith("http://localhost");
+const BASE = IS_PLACEHOLDER ? "" : RAW_BASE;
 
 function apiUrl(path: string, params?: Record<string, string>): string {
   const url = new URL(path, BASE);
@@ -62,8 +65,9 @@ async function apiDelete(path: string): Promise<void> {
   }
 }
 
+/** True only when a real backend URL is set (not a placeholder). Use direct Data API when you don't want a backend. */
 export function isNeonApiEnabled(): boolean {
-  return Boolean(BASE.trim());
+  return Boolean(BASE);
 }
 
 // Categories

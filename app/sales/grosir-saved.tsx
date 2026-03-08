@@ -39,7 +39,7 @@ export default function GrosirSavedScreen() {
   const loadDrafts = useCallback(async () => {
     try {
       // Load ALL saved drafts so multiple users can collaborate.
-      // Note: Supabase RLS must allow SELECT on `grosirDrafts` for this to work across users.
+      // Note: Neon Data API uses the authenticated role; ensure RLS or schema grants allow SELECT on grosirDrafts for your app.
       const list = await getGrosirDrafts();
       setDrafts(list);
     } catch (e) {

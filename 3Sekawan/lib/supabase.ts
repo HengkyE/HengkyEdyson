@@ -1,10 +1,7 @@
 /**
- * Use the root app's single Supabase client to avoid multiple GoTrueClient instances.
- * Types remain 3Sekawan's Database (sessions, shop_expenses, etc.).
+ * Re-export root app's client. Supabase was removed; root exports a Neon-only stub.
  */
 
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
-import { supabase as rootSupabase } from '../../lib/supabase';
+import { supabase as rootSupabase } from "../../lib/supabase";
 
-export const supabase = rootSupabase as ReturnType<typeof createClient<Database>>;
+export const supabase = rootSupabase;

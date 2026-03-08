@@ -2,12 +2,19 @@ import { getCurrentUserProfile, updateUserProfile } from "@/services/database";
 import type { UserProfile } from "@/types/database";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import * as neonAuth from "@/lib/neonAuthClient";
-import { supabase } from "@/lib/supabase";
-import type { Session, User } from "@supabase/supabase-js";
+
+interface AuthUser {
+  id: string;
+  email: string;
+  app_metadata: Record<string, unknown>;
+  user_metadata: { name?: string };
+  aud: string;
+  created_at: string;
+}
 
 interface AuthContextType {
-  session: Session | null;
-  user: User | null;
+  session: { user: AuthUser } | null;
+  user: AuthUser | null;
   profile: UserProfile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -18,8 +25,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<{ user: AuthUser } | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,11 +35,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       return;
     }
-
     try {
       const userProfile = await getCurrentUserProfile();
       setProfile(userProfile);
-
       if (userProfile) {
         try {
           await updateUserProfile(userId, { lastLoginAt: new Date().toISOString() });
@@ -59,16 +64,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const u = data.user;
-    const supabaseUser = {
+    const authUser: AuthUser = {
       id: u.id,
       email: u.email ?? "",
       app_metadata: {},
-      user_metadata: { name: u.name },
+      user_metadata: { name: u.name ?? undefined },
       aud: "authenticated",
       created_at: new Date().toISOString(),
-    } as User;
-    setUser(supabaseUser);
-    setSession({ user: supabaseUser } as Session);
+    };
+    setUser(authUser);
+    setSession({ user: authUser });
     fetchProfile(u.id);
   };
 
@@ -80,30 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       return;
     }
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    setLoading(false);
   }, [useNeonAuth]);
 
   const signIn = async (email: string, password: string) => {
@@ -113,42 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (data) setNeonSession(data);
       return { error: null };
     }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) return { error };
-
-    if (data.session) {
-      setSession(data.session);
-      setUser(data.session.user);
-      await fetchProfile(data.session.user.id);
-    }
-
-    return { error: null };
+    return { error: { message: "Configure Neon Auth. Set EXPO_PUBLIC_NEON_AUTH_URL in .env." } };
   };
 
   const signOut = async () => {
-    if (useNeonAuth) {
-      await neonAuth.neonAuthSignOut();
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      return;
-    }
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error("Error signing out:", error);
+    if (useNeonAuth) await neonAuth.neonAuthSignOut();
     setSession(null);
     setUser(null);
     setProfile(null);
   };
 
   const refreshProfile = async () => {
-    if (user?.id) {
-      await fetchProfile(user.id);
-    }
+    if (user?.id) await fetchProfile(user.id);
   };
 
   return (

@@ -27,6 +27,7 @@ export default function HomeScreen() {
   const [averageOrder, setAverageOrder] = useState(0);
   const [currentDate, setCurrentDate] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     setCurrentDate(getCurrentDateIndo());
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const loadSalesData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [kontanSales, grosirSales] = await Promise.all([
         getJualanKontanToday(),
         getJualanGrosirToday(),
@@ -50,8 +52,14 @@ export default function HomeScreen() {
       setTodaySales(totalSales);
       setTodayTransactions(totalTransactions);
       setAverageOrder(average);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading sales data:", error);
+      const msg = error?.message || String(error);
+      if (msg.includes("Neon database is required") || msg.includes("EXPO_PUBLIC_NEON")) {
+        setLoadError("Neon belum dikonfigurasi. Tambahkan EXPO_PUBLIC_NEON_DATA_API_URL dan EXPO_PUBLIC_NEON_AUTH_URL di .env (lihat NEON-DIRECT-SETUP.md).");
+      } else {
+        setLoadError(msg.slice(0, 120) + (msg.length > 120 ? "…" : ""));
+      }
     } finally {
       setLoading(false);
     }
@@ -135,6 +143,16 @@ export default function HomeScreen() {
             valueColor={colors.secondary}
           />
         </View>
+
+        {loadError && (
+          <View style={[styles.errorBanner, { backgroundColor: colors.error + "18", borderColor: colors.error + "40" }]}>
+            <Ionicons name="warning-outline" size={20} color={colors.error} />
+            <ThemedText style={[styles.errorText, { color: colors.error }]}>{loadError}</ThemedText>
+            <TouchableOpacity onPress={loadSalesData} style={[styles.retryButton, { borderColor: colors.error }]}>
+              <ThemedText style={[styles.retryButtonText, { color: colors.error }]}>Coba lagi</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Quick Actions Section */}
         <View style={styles.quickActionsSection}>
@@ -247,5 +265,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+  errorBanner: {
+    flexDirection: "column",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 20,
+    gap: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    textAlign: "center",
+  },
+  retryButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

@@ -8,7 +8,9 @@
 
 import { getNeonAuthToken } from "@/lib/neonAuthClient";
 
-const BASE = (process.env.EXPO_PUBLIC_NEON_DATA_API_URL || "").replace(/\/$/, "");
+// Accept URL with or without /rest/v1 (we append /rest/v1 for table paths)
+const raw = (process.env.EXPO_PUBLIC_NEON_DATA_API_URL || "").trim().replace(/\/$/, "");
+const BASE = raw.replace(/\/rest\/v1$/i, "");
 const REST = `${BASE}/rest/v1`;
 
 /** Thrown on Data API errors; use statusCode to show "sign in again" (401) or "no permission" (403). */

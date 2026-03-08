@@ -11,18 +11,22 @@ import * as FileSystem from "expo-file-system/legacy";
 import { Platform } from "react-native";
 import { generatePDFFromHTML, shareReceiptAsPDF } from "@/edysonpos/services/receipt-generator";
 
-// Telegram configuration from old system
-const TELEGRAM_BOT_TOKEN =
-  process.env.EXPO_PUBLIC_TELEGRAM_BOT_TOKEN || "1818313300:AAHoQ2CB2CwPiDOTxLpky78XvWmeID1YMP0";
-const TELEGRAM_CHAT_ID_KONTAN = process.env.EXPO_PUBLIC_TELEGRAM_CHAT_ID_KONTAN || "-510529386";
-const TELEGRAM_CHAT_ID_GROSIR = process.env.EXPO_PUBLIC_TELEGRAM_CHAT_ID_GROSIR || "-542841771";
+// Telegram: use .env only (no hardcoded secrets). Required for PDF receipts.
+function getTelegramConfig() {
+  const token = process.env.EXPO_PUBLIC_TELEGRAM_BOT_TOKEN?.trim();
+  const kontan = process.env.EXPO_PUBLIC_TELEGRAM_CHAT_ID_KONTAN?.trim();
+  const grosir = process.env.EXPO_PUBLIC_TELEGRAM_CHAT_ID_GROSIR?.trim();
+  if (!token) throw new Error("Missing EXPO_PUBLIC_TELEGRAM_BOT_TOKEN in .env");
+  return { token, kontan: kontan || "", grosir: grosir || "" };
+}
 
 /**
  * Verify Telegram bot token
  */
 async function verifyBotToken(): Promise<boolean> {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`, {
+    const { token } = getTelegramConfig();
+    const response = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
       method: "GET",
     });
 
@@ -49,6 +53,7 @@ async function sendPDFToTelegram(
   documentName: string
 ): Promise<boolean> {
   try {
+    const { token } = getTelegramConfig();
     console.log("Preparing to send PDF to Telegram...");
     console.log("PDF URI:", pdfUri);
     console.log("Chat ID:", chatId);
@@ -106,7 +111,7 @@ async function sendPDFToTelegram(
 
     const doSend = async (fd: FormData): Promise<{ ok: boolean; description?: string }> => {
       const response = await fetch(
-        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendDocument`,
+        `https://api.telegram.org/bot${token}/sendDocument`,
         {
           method: "POST",
           headers: {},
@@ -172,7 +177,8 @@ async function sendPDFToTelegram(
  */
 async function sendMessageToTelegram(chatId: string, message: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    const { token } = getTelegramConfig();
+    const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -233,7 +239,9 @@ export async function sendCashSaleToTelegramWithPDF(
 
     // Send PDF to Telegram
     console.log("Sending PDF to Telegram...");
-    const success = await sendPDFToTelegram(pdfUri, TELEGRAM_CHAT_ID_KONTAN, documentName);
+    const { kontan } = getTelegramConfig();
+    if (!kontan) throw new Error("Missing EXPO_PUBLIC_TELEGRAM_CHAT_ID_KONTAN in .env");
+    const success = await sendPDFToTelegram(pdfUri, kontan, documentName);
 
     if (success) {
       console.log("Cash sale receipt sent to Telegram successfully");
@@ -305,7 +313,9 @@ export async function sendWholesaleSaleToTelegram(
     // Send text message first (matches old system's sentTelegramChat)
     // Format: ${namaPelanggan} #${invoiceNo}_G_${size} belanja ${totalAmountValuePDF}
     const message = `${customerName} #${invoiceNo}_G_${format} belanja ${totalAmountValuePDF}`;
-    await sendMessageToTelegram(TELEGRAM_CHAT_ID_GROSIR, message);
+    const { grosir } = getTelegramConfig();
+    if (!grosir) throw new Error("Missing EXPO_PUBLIC_TELEGRAM_CHAT_ID_GROSIR in .env");
+    await sendMessageToTelegram(grosir, message);
 
     if (format === "A4") {
       // Default (new flow): send ONE A4 PDF to Telegram
@@ -320,7 +330,7 @@ export async function sendWholesaleSaleToTelegram(
         /[^0-9]/g,
         ""
       )}).pdf`;
-      await sendPDFToTelegram(pdfUri, TELEGRAM_CHAT_ID_GROSIR, documentName);
+      await sendPDFToTelegram(pdfUri, grosir, documentName);
     } else {
       // For A6, send 1 PDF (matches old system)
       const pdfUri = await shareReceiptAsPDF(receiptData, "wholesale", "A6");
@@ -329,7 +339,7 @@ export async function sendWholesaleSaleToTelegram(
         /[^0-9]/g,
         ""
       )}).pdf`;
-      await sendPDFToTelegram(pdfUri, TELEGRAM_CHAT_ID_GROSIR, documentName);
+      await sendPDFToTelegram(pdfUri, grosir, documentName);
     }
 
     console.log("Wholesale sale receipt sent to Telegram successfully");
@@ -370,11 +380,13 @@ export async function sendPaymentReceiptToTelegram(paymentData: PaymentReceiptDa
     const message = `${customerName} #${paymentData.invoiceNo} pembayaran ${formatIDR(
       paymentData.paymentAmount
     )}`;
-    await sendMessageToTelegram(TELEGRAM_CHAT_ID_GROSIR, message);
+    const { grosir } = getTelegramConfig();
+    if (!grosir) throw new Error("Missing EXPO_PUBLIC_TELEGRAM_CHAT_ID_GROSIR in .env");
+    await sendMessageToTelegram(grosir, message);
 
     // Send PDF
     const documentName = `${customerName} #${paymentData.invoiceNo}_PEMBAYARAN_(${paymentAmountValue}).pdf`;
-    await sendPDFToTelegram(pdfUri, TELEGRAM_CHAT_ID_GROSIR, documentName);
+    await sendPDFToTelegram(pdfUri, grosir, documentName);
 
     console.log("Payment receipt sent to Telegram successfully");
   } catch (error: any) {

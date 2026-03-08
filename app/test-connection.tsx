@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { testSupabaseConnection, testBarangById } from '@/utils/supabase-test';
+import { testNeonConnection, testBarangById } from '@/utils/supabase-test';
 import { getBarangs, getBarangByBarcode } from '@/edysonpos/services/database';
 
 export default function TestConnectionScreen() {
@@ -29,14 +29,13 @@ export default function TestConnectionScreen() {
   const testConnection = async () => {
     setLoading(true);
     clearResults();
-    addResult('Starting connection test...');
-
+    addResult('Testing Neon connection...');
     try {
-      const success = await testSupabaseConnection();
+      const success = await testNeonConnection();
       if (success) {
-        addResult('Connection test passed!');
+        addResult('Neon connection OK');
       } else {
-        addResult('Connection test failed. Check console for details.', true);
+        addResult('Neon not configured or connection failed. Set EXPO_PUBLIC_NEON_DATA_API_URL and EXPO_PUBLIC_NEON_AUTH_URL in .env.', true);
       }
     } catch (error: any) {
       addResult(`Error: ${error.message}`, true);
@@ -57,9 +56,8 @@ export default function TestConnectionScreen() {
       }
     } catch (error: any) {
       addResult(`Error: ${error.message}`, true);
-      if (error.code === 'PGRST301' || error.status === 406) {
-        addResult('This is likely an RLS (Row Level Security) issue.', true);
-        addResult('Please check SUPABASE_SETUP.md for instructions.', true);
+      if (error.message?.includes('Neon database is required')) {
+        addResult('Set EXPO_PUBLIC_NEON_DATA_API_URL or EXPO_PUBLIC_API_URL in .env', true);
       }
     } finally {
       setLoading(false);
@@ -86,23 +84,10 @@ export default function TestConnectionScreen() {
 
   const testDirectQuery = async () => {
     setLoading(true);
-    addResult('Testing direct Supabase query...');
-
+    addResult('Testing getBarangs() (Neon)...');
     try {
-      const { supabase } = await import('@/lib/supabase');
-      const { data, error, status } = await supabase
-        .from('barangs')
-        .select('id, barangNama')
-        .limit(5);
-
-      if (error) {
-        addResult(`Error: ${error.message} (Status: ${status})`, true);
-        addResult(`Code: ${error.code}`, true);
-        if (error.details) addResult(`Details: ${error.details}`, true);
-        if (error.hint) addResult(`Hint: ${error.hint}`, true);
-      } else {
-        addResult(`Success! Found ${data?.length || 0} products`);
-      }
+      const data = await getBarangs();
+      addResult(`Success! Found ${data?.length ?? 0} products`);
     } catch (error: any) {
       addResult(`Error: ${error.message}`, true);
     } finally {
@@ -125,10 +110,10 @@ export default function TestConnectionScreen() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Card style={styles.card}>
           <ThemedText style={[styles.sectionTitle, { color: colors.text }]}>
-            Supabase Connection Tests
+            Neon Connection Tests
           </ThemedText>
           <ThemedText style={[styles.description, { color: colors.icon }]}>
-            Use these tests to diagnose connection issues. Check the console for detailed logs.
+            Use these tests to verify Neon (EXPO_PUBLIC_NEON_DATA_API_URL or EXPO_PUBLIC_API_URL). Sign in with Neon Auth first.
           </ThemedText>
         </Card>
 
@@ -152,7 +137,7 @@ export default function TestConnectionScreen() {
             style={styles.button}
           />
           <Button
-            title="4. Test Direct Query"
+            title="4. Test getBarangs() again"
             onPress={testDirectQuery}
             loading={loading}
             style={styles.button}
@@ -191,10 +176,7 @@ export default function TestConnectionScreen() {
             Troubleshooting
           </ThemedText>
           <ThemedText style={[styles.infoText, { color: colors.icon }]}>
-            If you&apos;re getting 406 errors, it&apos;s likely a Row Level Security (RLS) issue.
-          </ThemedText>
-          <ThemedText style={[styles.infoText, { color: colors.icon }]}>
-            See SUPABASE_SETUP.md for instructions on configuring RLS policies.
+            Set EXPO_PUBLIC_NEON_DATA_API_URL and EXPO_PUBLIC_NEON_AUTH_URL in .env. See NEON-DIRECT-SETUP.md.
           </ThemedText>
         </Card>
       </ScrollView>

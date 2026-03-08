@@ -1,65 +1,46 @@
 /**
- * Supabase client configuration
- * 
- * Note: Replace these values with your actual Supabase project credentials
- * You can find these in your Supabase project settings under API
+ * Supabase has been removed; this app uses Neon only.
+ * This stub exists for any code that still imports supabase (e.g. 3Sekawan).
+ * Set EXPO_PUBLIC_NEON_DATA_API_URL and EXPO_PUBLIC_NEON_AUTH_URL in .env.
  */
 
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from './database.types';
+const noop = () => {};
+const emptySession = { data: { session: null }, error: null };
+const emptySub = { data: { subscription: { unsubscribe: noop } } };
+const emptyData = { data: [], error: null };
+const emptySingle = { data: null, error: null };
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-// Use placeholder values during build if env vars are not available
-// This prevents build failures - the app will show errors at runtime if not configured
-const buildSafeUrl = supabaseUrl || 'https://placeholder.supabase.co';
-const buildSafeKey = supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  if (typeof window !== 'undefined') {
-    // Only log error in browser, not during build
-    console.error(
-      '⚠️ Supabase credentials not configured. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your environment variables.'
-    );
-  }
-}
-
-export const supabase = createClient<Database>(buildSafeUrl, buildSafeKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: false, // Not needed for React Native
-  },
-  db: {
-    schema: 'public',
-  },
-  global: {
-    headers: {
-      'apikey': buildSafeKey,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-  },
+const chain = (result: any) => ({
+  order: () => Promise.resolve(result),
+  eq: () => Promise.resolve(result),
+  single: () => Promise.resolve(emptySingle),
+  maybeSingle: () => Promise.resolve(emptySingle),
+  limit: () => ({ single: () => Promise.resolve(emptySingle) }),
+  then: (resolve: (v: any) => void) => Promise.resolve(result).then(resolve),
+  catch: (fn: (e: any) => void) => Promise.resolve(result).catch(fn),
 });
 
-// Test connection function
+export const supabase = {
+  auth: {
+    getSession: () => Promise.resolve(emptySession),
+    onAuthStateChange: (_: any, __: any) => emptySub,
+    signInWithPassword: () => Promise.resolve({ data: null, error: { message: "Use Neon Auth. Set EXPO_PUBLIC_NEON_AUTH_URL." } }),
+    signOut: () => Promise.resolve({ error: null }),
+    getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+  },
+  from: (_: string) => ({
+    select: (..._args: any[]) => chain(emptyData),
+    insert: (_row: any) => ({ select: () => Promise.resolve(emptyData), single: () => Promise.resolve(emptySingle) }),
+    update: (_row: any) => ({ eq: () => ({ select: () => chain(emptySingle), single: () => Promise.resolve(emptySingle) }) }),
+    delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    rpc: () => Promise.resolve({ data: [], error: null }),
+  }),
+};
+
 export async function testSupabaseConnection(): Promise<boolean> {
-  try {
-    const { data, error } = await supabase
-      .from('barangs')
-      .select('id')
-      .limit(1);
-    
-    if (error) {
-      console.error('Supabase connection test failed:', error);
-      return false;
-    }
-    console.log('✅ Supabase connection successful');
-    return true;
-  } catch (error) {
-    console.error('Supabase connection test error:', error);
-    return false;
-  }
+  return false;
 }
 
+export async function testBarangById(_id: string): Promise<null> {
+  return null;
+}
