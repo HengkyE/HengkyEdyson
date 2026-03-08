@@ -22,11 +22,15 @@ export function PortfolioThemeProvider({ children }: { children: React.ReactNode
   const [mode, setModeState] = useState<PortfolioThemeMode>("dark");
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (stored === "light" || stored === "dark") {
-        setModeState(stored);
-      }
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (stored === "light" || stored === "dark") {
+          setModeState(stored);
+        }
+      })
+      .catch(() => {
+        // e.g. web without storage; keep default mode
+      });
   }, []);
 
   const setMode = useCallback((newMode: PortfolioThemeMode) => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useRouter, useSegments } from 'expo-router';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
@@ -44,14 +44,27 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [session, loading, segments]);
 
   if (loading) {
-    // Show loading screen while checking auth
+    // Show loading screen while checking auth (always visible: dark bar + text)
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.loadingTextWrap}>
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading…</Text>
+        </View>
       </View>
     );
   }
 
   return <>{children}</>;
 }
+
+const styles = {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  loadingTextWrap: { marginTop: 12 },
+  loadingText: { fontSize: 16, fontWeight: '500' as const },
+};
 

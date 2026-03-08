@@ -77,23 +77,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let cancelled = false;
+    const stopLoading = () => {
+      if (!cancelled) setLoading(false);
+    };
+
+    // Safety: stop loading after 2s so we never hang on a blank screen
+    const timeoutId = setTimeout(stopLoading, 2000);
+
     if (useNeonAuth) {
-      neonAuth.neonAuthGetSession().then(({ data }) => {
-        setNeonSession(data);
-        setLoading(false);
-      });
-      return;
+      neonAuth
+        .neonAuthGetSession()
+        .then(({ data }) => {
+          if (!cancelled) {
+            setNeonSession(data);
+            setLoading(false);
+          }
+        })
+        .catch(stopLoading)
+        .finally(() => clearTimeout(timeoutId));
+      return () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
     }
 
     // Supabase: Get initial session — stop loading as soon as we have session (don't wait for profile)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-      if (session?.user) {
-        fetchProfile(session.user.id); // fetch profile in background
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        if (!cancelled) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+          if (session?.user) {
+            fetchProfile(session.user.id); // fetch profile in background
+          }
+        }
+      })
+      .catch(stopLoading)
+      .finally(() => clearTimeout(timeoutId));
 
     // Listen for auth changes
     const {
@@ -109,7 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, [useNeonAuth]);
 
   const signIn = async (email: string, password: string) => {

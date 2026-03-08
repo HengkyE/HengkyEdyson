@@ -101,9 +101,6 @@ function createStyles(C: PortfolioThemeColors) {
     },
     tryButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" as const },
     tryHint: { fontSize: 12, marginTop: 8 },
-    runHintBox: { marginBottom: 20, padding: 16, borderRadius: 12, backgroundColor: C.surfaceCard, borderWidth: 1, borderColor: C.border },
-    runHintTitle: { fontSize: 13, fontWeight: "600" as const, color: C.text, marginBottom: 6 },
-    runHintText: { fontSize: 13, lineHeight: 20, color: C.textMuted },
     summary: { fontSize: 15, lineHeight: 24, color: C.textMuted, marginBottom: 28 },
     sectionDivider: { flexDirection: "row" as const, alignItems: "center", justifyContent: "center", gap: 16, marginBottom: 20 },
     sectionDividerLine: { flex: 1, height: 1, backgroundColor: C.border, opacity: 0.6 },
@@ -188,7 +185,7 @@ export default function ThreeSekawanProjectScreen() {
             style={styles.tryRow}
           >
             <TouchableOpacity
-              onPress={() => router.replace("/3sekawan")}
+              onPress={() => router.replace("/three-sekawan-app")}
               style={[styles.tryButton, { backgroundColor: C.accent, borderColor: C.border }]}
               activeOpacity={0.8}
               accessibilityRole="button"
@@ -199,16 +196,6 @@ export default function ThreeSekawanProjectScreen() {
             </TouchableOpacity>
             <Text style={[styles.tryHint, { color: C.textMuted }]}>
               Runs locally in this app (same as EdysonPOS). Sign in with Neon Auth to use billiard, POS, and expenses.
-            </Text>
-          </Animated.View>
-
-          <Animated.View
-            entering={FadeIn.duration(ANIMATION_DURATION).delay(STAGGER_DELAY * 2)}
-            style={styles.runHintBox}
-          >
-            <Text style={styles.runHintTitle}>Run standalone (optional)</Text>
-            <Text style={styles.runHintText}>
-              To run 3Sekawan as a separate app: cd 3Sekawan && npm start. Set EXPO_PUBLIC_API_URL and EXPO_PUBLIC_NEON_AUTH_URL in 3Sekawan/.env.
             </Text>
           </Animated.View>
 
